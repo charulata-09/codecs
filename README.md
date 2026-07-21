@@ -1,19 +1,19 @@
-# @babel/generator
+# @babel/helper-module-imports
 
-> Turns an AST into code.
+> Babel helper functions for inserting module loads
 
-See our website [@babel/generator](https://babeljs.io/docs/babel-generator) for more information or the [issues](https://github.com/babel/babel/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3A%22pkg%3A%20generator%22+is%3Aopen) associated with this package.
+See our website [@babel/helper-module-imports](https://babeljs.io/docs/babel-helper-module-imports) for more information.
 
 ## Install
 
 Using npm:
 
 ```sh
-npm install --save-dev @babel/generator
+npm install --save @babel/helper-module-imports
 ```
 
 or using yarn:
 
 ```sh
-yarn add @babel/generator --dev
+yarn add @babel/helper-module-imports
 ```

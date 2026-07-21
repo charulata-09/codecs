@@ -43,9 +43,9 @@ model Plan {
   name          String         @unique // e.g., "Free", "Pro", "Enterprise"
   description   String?
   price         Float
-  interval      String         // "month" or "year"
+  interval      String // "month" or "year"
   stripePriceId String?        @unique
-  features      Json           // Array of strings or object containing plan limits
+  features      Json // Array of strings or object containing plan limits
   active        Boolean        @default(true)
   subscriptions Subscription[]
   createdAt     DateTime       @default(now())
@@ -53,19 +53,19 @@ model Plan {
 }
 
 model Subscription {
-  id                   String         @id @default(uuid())
+  id                   String        @id @default(uuid())
   organizationId       String
-  organization         Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  stripeSubscriptionId String?        @unique
-  status               String         // "active", "canceled", "incomplete", "past_due", etc.
+  organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String?       @unique
+  status               String // "active", "canceled", "incomplete", "past_due", etc.
   planId               String
-  plan                 Plan           @relation(fields: [planId], references: [id])
+  plan                 Plan          @relation(fields: [planId], references: [id])
   currentPeriodStart   DateTime
   currentPeriodEnd     DateTime
-  cancelAtPeriodEnd    Boolean        @default(false)
+  cancelAtPeriodEnd    Boolean       @default(false)
   usageRecords         UsageRecord[]
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 }
 
 model Invoice {
@@ -74,7 +74,7 @@ model Invoice {
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   stripeInvoiceId String?      @unique
   amount          Float
-  status          String       // "paid", "open", "uncollectible", "void"
+  status          String // "paid", "open", "uncollectible", "void"
   pdfUrl          String?
   billingDate     DateTime
   createdAt       DateTime     @default(now())
@@ -85,7 +85,7 @@ model UsageRecord {
   id             String       @id @default(uuid())
   subscriptionId String
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  metricName     String       // "api_calls", "seats", "storage"
+  metricName     String // "api_calls", "seats", "storage"
   quantity       Int          @default(0)
   timestamp      DateTime     @default(now())
   createdAt      DateTime     @default(now())

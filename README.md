@@ -1,19 +1,19 @@
-# @babel/helper-validator-option
+# @babel/runtime
 
-> Validate plugin/preset options
+> babel's modular runtime helpers
 
-See our website [@babel/helper-validator-option](https://babeljs.io/docs/babel-helper-validator-option) for more information.
+See our website [@babel/runtime](https://babeljs.io/docs/babel-runtime) for more information.
 
 ## Install
 
 Using npm:
 
 ```sh
-npm install --save @babel/helper-validator-option
+npm install --save @babel/runtime
 ```
 
 or using yarn:
 
 ```sh
-yarn add @babel/helper-validator-option
+yarn add @babel/runtime
 ```

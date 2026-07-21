@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ORG_ADMIN
+  MEMBER
+}
+
+model User {
+  id             String       @id @default(uuid())
+  email          String       @unique
+  name           String?
+  password       String
+  role           Role         @default(MEMBER)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Organization {
+  id               String         @id @default(uuid())
+  name             String
+  stripeCustomerId String?        @unique
+  users            User[]
+  subscriptions    Subscription[]
+  invoices         Invoice[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Plan {
+  id            String         @id @default(uuid())
+  name          String         @unique // e.g., "Free", "Pro", "Enterprise"
+  description   String?
+  price         Float
+  interval      String         // "month" or "year"
+  stripePriceId String?        @unique
+  features      Json           // Array of strings or object containing plan limits
+  active        Boolean        @default(true)
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Subscription {
+  id                   String         @id @default(uuid())
+  organizationId       String
+  organization         Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String?        @unique
+  status               String         // "active", "canceled", "incomplete", "past_due", etc.
+  planId               String
+  plan                 Plan           @relation(fields: [planId], references: [id])
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean        @default(false)
+  usageRecords         UsageRecord[]
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}
+
+model Invoice {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stripeInvoiceId String?      @unique
+  amount          Float
+  status          String       // "paid", "open", "uncollectible", "void"
+  pdfUrl          String?
+  billingDate     DateTime
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model UsageRecord {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  metricName     String       // "api_calls", "seats", "storage"
+  quantity       Int          @default(0)
+  timestamp      DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}

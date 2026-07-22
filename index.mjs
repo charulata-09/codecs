@@ -1,7 +1,3 @@
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
 var ast = /*#__PURE__*/Object.freeze({
     __proto__: null
 });
@@ -3032,11 +3028,5 @@ function visitRegExpAST(node, handlers) {
     new RegExpVisitor(handlers).visit(node);
 }
 
-exports.AST = ast;
-exports.RegExpParser = RegExpParser;
-exports.RegExpSyntaxError = RegExpSyntaxError;
-exports.RegExpValidator = RegExpValidator;
-exports.parseRegExpLiteral = parseRegExpLiteral;
-exports.validateRegExpLiteral = validateRegExpLiteral;
-exports.visitRegExpAST = visitRegExpAST;
-//# sourceMappingURL=index.js.map
+export { ast as AST, RegExpParser, RegExpSyntaxError, RegExpValidator, parseRegExpLiteral, validateRegExpLiteral, visitRegExpAST };
+//# sourceMappingURL=index.mjs.map

@@ -1,61 +1,91 @@
 {
-  "name": "@eslint/plugin-kit",
-  "version": "0.4.1",
-  "description": "Utilities for building ESLint plugins.",
-  "author": "Nicholas C. Zakas",
-  "type": "module",
-  "main": "dist/esm/index.js",
-  "types": "dist/esm/index.d.ts",
-  "exports": {
-    "require": {
-      "types": "./dist/cjs/index.d.cts",
-      "default": "./dist/cjs/index.cjs"
-    },
-    "import": {
-      "types": "./dist/esm/index.d.ts",
-      "default": "./dist/esm/index.js"
-    }
-  },
-  "files": [
-    "dist"
+  "name": "@eslint-community/regexpp",
+  "version": "4.12.2",
+  "description": "Regular expression parser for ECMAScript.",
+  "keywords": [
+    "regexp",
+    "regular",
+    "expression",
+    "parser",
+    "validator",
+    "ast",
+    "abstract",
+    "syntax",
+    "tree",
+    "ecmascript",
+    "es2015",
+    "es2016",
+    "es2017",
+    "es2018",
+    "es2019",
+    "es2020",
+    "es2021",
+    "annexB"
   ],
-  "publishConfig": {
-    "access": "public"
+  "homepage": "https://github.com/eslint-community/regexpp#readme",
+  "bugs": {
+    "url": "https://github.com/eslint-community/regexpp/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eslint/rewrite.git",
-    "directory": "packages/plugin-kit"
+    "url": "https://github.com/eslint-community/regexpp"
   },
-  "bugs": {
-    "url": "https://github.com/eslint/rewrite/issues"
+  "license": "MIT",
+  "author": "Toru Nagashima",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
   },
-  "homepage": "https://github.com/eslint/rewrite/tree/main/packages/plugin-kit#readme",
-  "scripts": {
-    "build:dedupe-types": "node ../../tools/dedupe-types.js dist/cjs/index.cjs dist/esm/index.js",
-    "build:cts": "node ../../tools/build-cts.js dist/esm/index.d.ts dist/cjs/index.d.cts",
-    "build": "rollup -c && npm run build:dedupe-types && tsc -p tsconfig.esm.json && npm run build:cts",
-    "pretest": "npm run build",
-    "test": "mocha \"tests/**/*.test.js\"",
-    "test:coverage": "c8 npm test",
-    "test:jsr": "npx jsr@latest publish --dry-run",
-    "test:types": "tsc -p tests/types/tsconfig.json"
-  },
-  "keywords": [
-    "eslint",
-    "eslintplugin",
-    "eslint-plugin"
+  "main": "index",
+  "files": [
+    "index.*"
   ],
-  "license": "Apache-2.0",
-  "dependencies": {
-    "@eslint/core": "^0.17.0",
-    "levn": "^0.4.1"
+  "scripts": {
+    "prebuild": "npm run -s clean",
+    "build": "run-s build:*",
+    "build:tsc": "tsc --module es2015",
+    "build:rollup": "rollup -c",
+    "build:dts": "npm run -s build:tsc -- --removeComments false && dts-bundle --name @eslint-community/regexpp --main .temp/index.d.ts --out ../index.d.ts && prettier --write index.d.ts",
+    "clean": "rimraf .temp index.*",
+    "lint": "eslint . --ext .ts",
+    "test": "nyc _mocha \"test/*.ts\" --reporter dot --timeout 10000",
+    "debug": "mocha --require ts-node/register/transpile-only \"test/*.ts\" --reporter dot --timeout 10000",
+    "update:test": "ts-node scripts/update-fixtures.ts",
+    "update:unicode": "run-s update:unicode:*",
+    "update:unicode:ids": "ts-node scripts/update-unicode-ids.ts",
+    "update:unicode:props": "ts-node scripts/update-unicode-properties.ts",
+    "update:test262:extract": "ts-node -T scripts/extract-test262.ts",
+    "preversion": "npm test && npm run -s build",
+    "postversion": "git push && git push --tags",
+    "prewatch": "npm run -s clean",
+    "watch": "_mocha \"test/*.ts\" --require ts-node/register --reporter dot --timeout 10000 --watch-extensions ts --watch --growl"
   },
+  "dependencies": {},
   "devDependencies": {
-    "@types/levn": "^0.4.0",
-    "rollup-plugin-copy": "^3.5.0"
+    "@eslint-community/eslint-plugin-mysticatea": "^15.5.1",
+    "@rollup/plugin-node-resolve": "^14.1.0",
+    "@types/eslint": "^8.44.3",
+    "@types/jsdom": "^16.2.15",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^12.20.55",
+    "dts-bundle": "^0.7.3",
+    "eslint": "^8.50.0",
+    "js-tokens": "^8.0.2",
+    "jsdom": "^19.0.0",
+    "mocha": "^9.2.2",
+    "npm-run-all2": "^6.2.2",
+    "nyc": "^14.1.1",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.79.1",
+    "rollup-plugin-sourcemaps": "^0.6.3",
+    "ts-node": "^10.9.1",
+    "typescript": "~5.0.2"
   },
   "engines": {
-    "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
+    "node": "^12.0.0 || ^14.0.0 || >=16.0.0"
   }
 }

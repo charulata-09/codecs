@@ -1,130 +1,258 @@
-# ESLintRC Library
+# ESLint Plugin Kit
 
-This repository contains the legacy ESLintRC configuration file format for ESLint. This package is not intended for use outside of the ESLint ecosystem. It is ESLint-specific and not intended for use in other programs.
+## Description
 
-**Note:** This package is frozen except for critical bug fixes as ESLint moves to a new config system.
+A collection of utilities to help build ESLint plugins.
 
 ## Installation
 
-You can install the package as follows:
+For Node.js and compatible runtimes:
 
 ```shell
-npm install @eslint/eslintrc -D
+npm install @eslint/plugin-kit
 # or
-yarn add @eslint/eslintrc -D
+yarn add @eslint/plugin-kit
 # or
-pnpm install @eslint/eslintrc -D
+pnpm install @eslint/plugin-kit
 # or
-bun install @eslint/eslintrc -D
+bun add @eslint/plugin-kit
 ```
 
-## Usage (ESM)
+For Deno:
 
-The primary class in this package is `FlatCompat`, which is a utility to translate ESLintRC-style configs into flat configs. Here's how you use it inside of your `eslint.config.js` file:
+```shell
+deno add @eslint/plugin-kit
+```
+
+## Usage
+
+This package exports the following utilities:
+
+- [`ConfigCommentParser`](#configcommentparser) - used to parse ESLint configuration comments (i.e., `/* eslint-disable rule */`)
+- [`VisitNodeStep` and `CallMethodStep`](#visitnodestep-and-callmethodstep) - used to help implement `SourceCode#traverse()`
+- [`Directive`](#directive) - used to help implement `SourceCode#getDisableDirectives()`
+- [`TextSourceCodeBase`](#textsourcecodebase) - base class to help implement the `SourceCode` interface
+
+### `ConfigCommentParser`
+
+To use the `ConfigCommentParser` class, import it from the package and create a new instance, such as:
 
 ```js
-import { FlatCompat } from "@eslint/eslintrc";
-import js from "@eslint/js";
-import path from "path";
-import { fileURLToPath } from "url";
+import { ConfigCommentParser } from "@eslint/plugin-kit";
 
-// mimic CommonJS variables -- not needed if using CommonJS
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// create a new instance
+const commentParser = new ConfigCommentParser();
 
-const compat = new FlatCompat({
-    baseDirectory: __dirname,                  // optional; default: process.cwd()
-    resolvePluginsRelativeTo: __dirname,       // optional
-    recommendedConfig: js.configs.recommended, // optional unless you're using "eslint:recommended"
-    allConfig: js.configs.all,                 // optional unless you're using "eslint:all"
-});
+// pass in a comment string without the comment delimiters
+const directive = commentParser.parseDirective(
+	"eslint-disable prefer-const, semi -- I don't want to use these.",
+);
 
-export default [
-
-    // mimic ESLintRC-style extends
-    ...compat.extends("standard", "example", "plugin:react/recommended"),
-
-    // mimic environments
-    ...compat.env({
-        es2020: true,
-        node: true
-    }),
-
-    // mimic plugins
-    ...compat.plugins("jsx-a11y", "react"),
-
-    // translate an entire config
-    ...compat.config({
-        plugins: ["jsx-a11y", "react"],
-        extends: "standard",
-        env: {
-            es2020: true,
-            node: true
-        },
-        rules: {
-            semi: "error"
-        }
-    })
-];
+// will be undefined when a directive can't be parsed
+if (directive) {
+	console.log(directive.label); // "eslint-disable"
+	console.log(directive.value); // "prefer-const, semi"
+	console.log(directive.justification); // "I don't want to use these."
+}
 ```
 
-## Usage (CommonJS)
-
-Using `FlatCompat` in CommonJS files is similar to ESM, but you'll use `require()` and `module.exports` instead of `import` and `export`. Here's how you use it inside of your `eslint.config.js` CommonJS file:
+There are different styles of directive values that you'll need to parse separately to get the correct format:
 
 ```js
-const { FlatCompat } = require("@eslint/eslintrc");
-const js = require("@eslint/js");
+import { ConfigCommentParser } from "@eslint/plugin-kit";
 
-const compat = new FlatCompat({
-    baseDirectory: __dirname,                  // optional; default: process.cwd()
-    resolvePluginsRelativeTo: __dirname,       // optional
-    recommendedConfig: js.configs.recommended, // optional unless using "eslint:recommended"
-    allConfig: js.configs.all,                 // optional unless using "eslint:all"
-});
+// create a new instance
+const commentParser = new ConfigCommentParser();
 
-module.exports = [
+// list format
+const list = commentParser.parseListConfig("prefer-const, semi");
+console.log(Object.entries(list)); // [["prefer-const", true], ["semi", true]]
 
-    // mimic ESLintRC-style extends
-    ...compat.extends("standard", "example", "plugin:react/recommended"),
+// string format
+const strings = commentParser.parseStringConfig("foo:off, bar");
+console.log(Object.entries(strings)); // [["foo", "off"], ["bar", null]]
 
-    // mimic environments
-    ...compat.env({
-        es2020: true,
-        node: true
-    }),
-
-    // mimic plugins
-    ...compat.plugins("jsx-a11y", "react"),
-
-    // translate an entire config
-    ...compat.config({
-        plugins: ["jsx-a11y", "react"],
-        extends: "standard",
-        env: {
-            es2020: true,
-            node: true
-        },
-        rules: {
-            semi: "error"
-        }
-    })
-];
+// JSON-like config format
+const jsonLike = commentParser.parseJSONLikeConfig(
+	"semi:[error, never], prefer-const: warn",
+);
+console.log(Object.entries(jsonLike.config)); // [["semi", ["error", "never"]], ["prefer-const", "warn"]]
 ```
 
-## Troubleshooting
+### `VisitNodeStep` and `CallMethodStep`
 
-**TypeError: Missing parameter 'recommendedConfig' in FlatCompat constructor**
+The `VisitNodeStep` and `CallMethodStep` classes represent steps in the traversal of source code. They implement the correct interfaces to return from the `SourceCode#traverse()` method.
 
-The `recommendedConfig` option is required when any config uses `eslint:recommended`, including any config in an `extends` clause. To fix this, follow the example above using `@eslint/js` to provide the `eslint:recommended` config.
+The `VisitNodeStep` class is the more common of the two, where you are describing a visit to a particular node during the traversal. The constructor accepts three arguments:
 
-**TypeError: Missing parameter 'allConfig' in FlatCompat constructor**
+- `target` - the node being visited. This is used to determine the method to call inside of a rule. For instance, if the node's type is `Literal` then ESLint will call a method named `Literal()` on the rule (if present).
+- `phase` - either 1 for enter or 2 for exit.
+- `args` - an array of arguments to pass into the visitor method of a rule.
 
-The `allConfig` option is required when any config uses `eslint:all`, including any config in an `extends` clause. To fix this, follow the example above using `@eslint/js` to provide the `eslint:all` config.
+For example:
+
+```js
+import { VisitNodeStep } from "@eslint/plugin-kit";
+
+class MySourceCode {
+	traverse() {
+		const steps = [];
+
+		for (const { node, parent, phase } of iterator(this.ast)) {
+			steps.push(
+				new VisitNodeStep({
+					target: node,
+					phase: phase === "enter" ? 1 : 2,
+					args: [node, parent],
+				}),
+			);
+		}
+
+		return steps;
+	}
+}
+```
+
+The `CallMethodStep` class is less common and is used to tell ESLint to call a specific method on the rule. The constructor accepts two arguments:
+
+- `target` - the name of the method to call, frequently beginning with `"on"` such as `"onCodePathStart"`.
+- `args` - an array of arguments to pass to the method.
+
+For example:
+
+```js
+import { VisitNodeStep, CallMethodStep } from "@eslint/plugin-kit";
+
+class MySourceCode {
+    traverse() {
+        const steps = [];
+
+        for (const { node, parent, phase } of iterator(this.ast)) {
+            steps.push(
+                new VisitNodeStep({
+                    target: node,
+                    phase: phase === "enter" ? 1 : 2,
+                    args: [node, parent],
+                }),
+            );
+
+            // call a method indicating how many times we've been through the loop
+            steps.push(
+                new CallMethodStep({
+                    target: "onIteration",
+                    args: [steps.length]
+                });
+            )
+        }
+
+        return steps;
+    }
+}
+```
+
+### `Directive`
+
+The `Directive` class represents a disable directive in the source code and implements the `Directive` interface from `@eslint/core`. You can tell ESLint about disable directives using the `SourceCode#getDisableDirectives()` method, where part of the return value is an array of `Directive` objects. Here's an example:
+
+```js
+import { Directive, ConfigCommentParser } from "@eslint/plugin-kit";
+
+class MySourceCode {
+	getDisableDirectives() {
+		const directives = [];
+		const problems = [];
+		const commentParser = new ConfigCommentParser();
+
+		// read in the inline config nodes to check each one
+		this.getInlineConfigNodes().forEach(comment => {
+			// Step 1: Parse the directive
+			const { label, value, justification } =
+				commentParser.parseDirective(comment.value);
+
+			// Step 2: Extract the directive value and create the `Directive` object
+			switch (label) {
+				case "eslint-disable":
+				case "eslint-enable":
+				case "eslint-disable-next-line":
+				case "eslint-disable-line": {
+					const directiveType = label.slice("eslint-".length);
+
+					directives.push(
+						new Directive({
+							type: directiveType,
+							node: comment,
+							value,
+							justification,
+						}),
+					);
+				}
+
+				// ignore any comments that don't begin with known labels
+			}
+		});
+
+		return {
+			directives,
+			problems,
+		};
+	}
+}
+```
+
+### `TextSourceCodeBase`
+
+The `TextSourceCodeBase` class is intended to be a base class that has several of the common members found in `SourceCode` objects already implemented. Those members are:
+
+- `lines` - an array of text lines that is created automatically when the constructor is called.
+- `getLoc(nodeOrToken)` - gets the location of a node or token. Works for nodes that have the ESLint-style `loc` property and nodes that have the Unist-style [`position` property](https://github.com/syntax-tree/unist?tab=readme-ov-file#position). If you're using an AST with a different location format, you'll still need to implement this method yourself.
+- `getLocFromIndex(index)` - Converts a source text index into a `{ line: number, column: number }` pair. (For this method to work, the root node should always cover the entire source code text, and the `getLoc()` method needs to be implemented correctly.)
+- `getIndexFromLoc(loc)` - Converts a `{ line: number, column: number }` pair into a source text index. (For this method to work, the root node should always cover the entire source code text, and the `getLoc()` method needs to be implemented correctly.)
+- `getRange(nodeOrToken)` - gets the range of a node or token within the source text. Works for nodes that have the ESLint-style `range` property and nodes that have the Unist-style [`position` property](https://github.com/syntax-tree/unist?tab=readme-ov-file#position). If you're using an AST with a different range format, you'll still need to implement this method yourself.
+- `getText(node, beforeCount, afterCount)` - gets the source text for the given node that has range information attached. Optionally, can return additional characters before and after the given node. As long as `getRange()` is properly implemented, this method will just work.
+- `getAncestors(node)` - returns the ancestry of the node. In order for this to work, you must implement the `getParent()` method yourself.
+
+Here's an example:
+
+```js
+import { TextSourceCodeBase } from "@eslint/plugin-kit";
+
+export class MySourceCode extends TextSourceCodeBase {
+	#parents = new Map();
+
+	constructor({ ast, text }) {
+		super({ ast, text });
+	}
+
+	getParent(node) {
+		return this.#parents.get(node);
+	}
+
+	traverse() {
+		const steps = [];
+
+		for (const { node, parent, phase } of iterator(this.ast)) {
+			//save the parent information
+			this.#parent.set(node, parent);
+
+			steps.push(
+				new VisitNodeStep({
+					target: node,
+					phase: phase === "enter" ? 1 : 2,
+					args: [node, parent],
+				}),
+			);
+		}
+
+		return steps;
+	}
+}
+```
+
+In general, it's safe to collect the parent information during the `traverse()` method as `getParent()` and `getAncestor()` will only be called from rules once the AST has been traversed at least once.
 
 ## License
 
-MIT License
+Apache 2.0
 
 <!-- NOTE: This section is autogenerated. Do not manually edit.-->
 <!--sponsorsstart-->
@@ -135,10 +263,10 @@ The following companies, organizations, and individuals support ESLint's ongoing
 to get your logo on our READMEs and [website](https://eslint.org/sponsors).
 
 <h3>Platinum Sponsors</h3>
-<p><a href="https://automattic.com"><img src="https://images.opencollective.com/automattic/d0ef3e1/logo.png" alt="Automattic" height="128"></a></p><h3>Gold Sponsors</h3>
-<p><a href="https://qlty.sh/"><img src="https://images.opencollective.com/qltysh/33d157d/logo.png" alt="Qlty Software" height="96"></a> <a href="https://shopify.engineering/"><img src="https://avatars.githubusercontent.com/u/8085" alt="Shopify" height="96"></a> <a href="https://www.coderabbit.ai/?utm_source=cr_org&utm_medium=github"><img src="https://avatars.githubusercontent.com/u/132028505" alt="CodeRabbit" height="96"></a></p><h3>Silver Sponsors</h3>
-<p><a href="https://vite.dev/"><img src="https://images.opencollective.com/vite/d472863/logo.png" alt="Vite" height="64"></a> <a href="https://liftoff.io/"><img src="https://images.opencollective.com/liftoff/2d6c3b6/logo.png" alt="Liftoff" height="64"></a> <a href="https://stackblitz.com"><img src="https://avatars.githubusercontent.com/u/28635252" alt="StackBlitz" height="64"></a></p><h3>Bronze Sponsors</h3>
-<p><a href="https://cybozu.co.jp/"><img src="https://images.opencollective.com/cybozu/933e46d/logo.png" alt="Cybozu" height="32"></a> <a href="https://opensource.sap.com"><img src="https://avatars.githubusercontent.com/u/2531208" alt="SAP" height="32"></a> <a href="https://icons8.com/"><img src="https://images.opencollective.com/icons8/7fa1641/logo.png" alt="Icons8" height="32"></a> <a href="https://discord.com"><img src="https://images.opencollective.com/discordapp/f9645d9/logo.png" alt="Discord" height="32"></a> <a href="https://www.gitbook.com"><img src="https://avatars.githubusercontent.com/u/7111340" alt="GitBook" height="32"></a> <a href="https://citadel-ai.com"><img src="https://avatars.githubusercontent.com/u/75781367" alt="Citadel AI" height="32"></a></p>
+<p><a href="https://automattic.com"><img src="https://images.opencollective.com/automattic/d0ef3e1/logo.png" alt="Automattic" height="128"></a> <a href="https://www.airbnb.com/"><img src="https://images.opencollective.com/airbnb/d327d66/logo.png" alt="Airbnb" height="128"></a></p><h3>Gold Sponsors</h3>
+<p><a href="https://qlty.sh/"><img src="https://images.opencollective.com/qltysh/33d157d/logo.png" alt="Qlty Software" height="96"></a> <a href="https://trunk.io/"><img src="https://images.opencollective.com/trunkio/fb92d60/avatar.png" alt="trunk.io" height="96"></a> <a href="https://shopify.engineering/"><img src="https://avatars.githubusercontent.com/u/8085" alt="Shopify" height="96"></a></p><h3>Silver Sponsors</h3>
+<p><a href="https://vite.dev/"><img src="https://images.opencollective.com/vite/e6d15e1/logo.png" alt="Vite" height="64"></a> <a href="https://liftoff.io/"><img src="https://images.opencollective.com/liftoff/5c4fa84/logo.png" alt="Liftoff" height="64"></a> <a href="https://americanexpress.io"><img src="https://avatars.githubusercontent.com/u/3853301" alt="American Express" height="64"></a> <a href="https://stackblitz.com"><img src="https://avatars.githubusercontent.com/u/28635252" alt="StackBlitz" height="64"></a></p><h3>Bronze Sponsors</h3>
+<p><a href="https://syntax.fm"><img src="https://github.com/syntaxfm.png" alt="Syntax" height="32"></a> <a href="https://cybozu.co.jp/"><img src="https://images.opencollective.com/cybozu/933e46d/logo.png" alt="Cybozu" height="32"></a> <a href="https://sentry.io"><img src="https://github.com/getsentry.png" alt="Sentry" height="32"></a> <a href="https://icons8.com/"><img src="https://images.opencollective.com/icons8/7fa1641/logo.png" alt="Icons8" height="32"></a> <a href="https://discord.com"><img src="https://images.opencollective.com/discordapp/f9645d9/logo.png" alt="Discord" height="32"></a> <a href="https://www.gitbook.com"><img src="https://avatars.githubusercontent.com/u/7111340" alt="GitBook" height="32"></a> <a href="https://nx.dev"><img src="https://avatars.githubusercontent.com/u/23692104" alt="Nx" height="32"></a> <a href="https://opensource.mercedes-benz.com/"><img src="https://avatars.githubusercontent.com/u/34240465" alt="Mercedes-Benz Group" height="32"></a> <a href="https://herocoders.com"><img src="https://avatars.githubusercontent.com/u/37549774" alt="HeroCoders" height="32"></a> <a href="https://www.lambdatest.com"><img src="https://avatars.githubusercontent.com/u/171592363" alt="LambdaTest" height="32"></a></p>
 <h3>Technology Sponsors</h3>
 Technology sponsors allow us to use their products and services for free as part of a contribution to the open source ecosystem and our work.
 <p><a href="https://netlify.com"><img src="https://raw.githubusercontent.com/eslint/eslint.org/main/src/assets/images/techsponsors/netlify-icon.svg" alt="Netlify" height="32"></a> <a href="https://algolia.com"><img src="https://raw.githubusercontent.com/eslint/eslint.org/main/src/assets/images/techsponsors/algolia-icon.svg" alt="Algolia" height="32"></a> <a href="https://1password.com"><img src="https://raw.githubusercontent.com/eslint/eslint.org/main/src/assets/images/techsponsors/1password-icon.svg" alt="1Password" height="32"></a></p>

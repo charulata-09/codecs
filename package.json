@@ -1,77 +1,59 @@
 {
-  "name": "@eslint/eslintrc",
-  "version": "3.3.6",
-  "description": "The legacy ESLintRC config file format for ESLint",
+  "name": "@eslint/plugin-kit",
+  "version": "0.4.1",
+  "description": "Utilities for building ESLint plugins.",
+  "author": "Nicholas C. Zakas",
   "type": "module",
-  "main": "./dist/eslintrc.cjs",
-  "types": "./dist/eslintrc.d.cts",
+  "main": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
   "exports": {
-    ".": {
-      "import": "./lib/index.js",
-      "require": "./dist/eslintrc.cjs",
-      "types": "./lib/types/index.d.ts"
+    "require": {
+      "types": "./dist/cjs/index.d.cts",
+      "default": "./dist/cjs/index.cjs"
     },
-    "./package.json": "./package.json",
-    "./universal": {
-      "import": "./lib/index-universal.js",
-      "require": "./dist/eslintrc-universal.cjs"
+    "import": {
+      "types": "./dist/esm/index.d.ts",
+      "default": "./dist/esm/index.js"
     }
   },
   "files": [
-    "lib",
-    "conf",
-    "LICENSE",
-    "dist",
-    "universal.js"
+    "dist"
   ],
   "publishConfig": {
     "access": "public"
   },
-  "scripts": {
-    "build": "rollup -c && node -e \"fs.copyFileSync('./lib/types/index.d.ts', './dist/eslintrc.d.cts')\"",
-    "lint": "eslint . --report-unused-disable-directives",
-    "lint:fix": "npm run lint -- --fix",
-    "prepare": "npm run build",
-    "test": "mocha -R progress -c \"tests/lib/*.cjs\" && mocha -R progress -c \"tests/lib/**/*.js\"",
-    "test:coverage": "c8 npm test",
-    "test:types": "tsc -p tests/lib/types/tsconfig.json"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eslint/rewrite.git",
+    "directory": "packages/plugin-kit"
   },
-  "repository": "eslint/eslintrc",
-  "funding": "https://opencollective.com/eslint",
-  "keywords": [
-    "ESLint",
-    "ESLintRC",
-    "Configuration"
-  ],
-  "author": "Nicholas C. Zakas",
-  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/eslint/eslintrc/issues"
+    "url": "https://github.com/eslint/rewrite/issues"
   },
-  "homepage": "https://github.com/eslint/eslintrc#readme",
-  "devDependencies": {
-    "c8": "^7.7.3",
-    "chai": "^4.3.4",
-    "eslint": "^9.20.1",
-    "eslint-config-eslint": "^11.0.0",
-    "fs-teardown": "^0.1.3",
-    "mocha": "^11.7.6",
-    "rollup": "^2.70.1",
-    "shelljs": "^0.8.5",
-    "sinon": "^11.1.2",
-    "temp-dir": "^2.0.0",
-    "typescript": "^5.7.3"
+  "homepage": "https://github.com/eslint/rewrite/tree/main/packages/plugin-kit#readme",
+  "scripts": {
+    "build:dedupe-types": "node ../../tools/dedupe-types.js dist/cjs/index.cjs dist/esm/index.js",
+    "build:cts": "node ../../tools/build-cts.js dist/esm/index.d.ts dist/cjs/index.d.cts",
+    "build": "rollup -c && npm run build:dedupe-types && tsc -p tsconfig.esm.json && npm run build:cts",
+    "pretest": "npm run build",
+    "test": "mocha \"tests/**/*.test.js\"",
+    "test:coverage": "c8 npm test",
+    "test:jsr": "npx jsr@latest publish --dry-run",
+    "test:types": "tsc -p tests/types/tsconfig.json"
   },
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin"
+  ],
+  "license": "Apache-2.0",
   "dependencies": {
-    "ajv": "^6.14.0",
-    "debug": "^4.3.2",
-    "espree": "^10.0.1",
-    "globals": "^14.0.0",
-    "ignore": "^5.2.0",
-    "import-fresh": "^3.2.1",
-    "js-yaml": "^4.3.0",
-    "minimatch": "^3.1.5",
-    "strip-json-comments": "^3.1.1"
+    "@eslint/core": "^0.17.0",
+    "levn": "^0.4.1"
+  },
+  "devDependencies": {
+    "@types/levn": "^0.4.0",
+    "rollup-plugin-copy": "^3.5.0"
   },
   "engines": {
     "node": "^18.18.0 || ^20.9.0 || >=21.1.0"

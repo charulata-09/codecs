@@ -1,63 +1,77 @@
 {
-  "name": "@jridgewell/sourcemap-codec",
-  "version": "1.5.5",
-  "description": "Encode/decode sourcemap mappings",
-  "keywords": [
-    "sourcemap",
-    "vlq"
-  ],
-  "main": "dist/sourcemap-codec.umd.js",
-  "module": "dist/sourcemap-codec.mjs",
-  "types": "types/sourcemap-codec.d.cts",
-  "files": [
-    "dist",
-    "src",
-    "types"
-  ],
+  "name": "@kurkle/color",
+  "type": "module",
+  "version": "0.3.4",
+  "description": "css color parsing, manupulation and conversion",
+  "sideEffects": false,
+  "main": "dist/color.cjs",
+  "module": "dist/color.esm.js",
+  "types": "dist/color.d.ts",
   "exports": {
-    ".": [
-      {
-        "import": {
-          "types": "./types/sourcemap-codec.d.mts",
-          "default": "./dist/sourcemap-codec.mjs"
-        },
-        "default": {
-          "types": "./types/sourcemap-codec.d.cts",
-          "default": "./dist/sourcemap-codec.umd.js"
-        }
-      },
-      "./dist/sourcemap-codec.umd.js"
-    ],
-    "./package.json": "./package.json"
+    "types": "./dist/color.d.ts",
+    "import": "./dist/color.esm.js",
+    "require": "./dist/color.cjs"
   },
   "scripts": {
-    "benchmark": "run-s build:code benchmark:*",
-    "benchmark:install": "cd benchmark && npm install",
-    "benchmark:only": "node --expose-gc benchmark/index.js",
-    "build": "run-s -n build:code build:types",
-    "build:code": "node ../../esbuild.mjs sourcemap-codec.ts",
-    "build:types": "run-s build:types:force build:types:emit build:types:mts",
-    "build:types:force": "rimraf tsconfig.build.tsbuildinfo",
-    "build:types:emit": "tsc --project tsconfig.build.json",
-    "build:types:mts": "node ../../mts-types.mjs",
-    "clean": "run-s -n clean:code clean:types",
-    "clean:code": "tsc --build --clean tsconfig.build.json",
-    "clean:types": "rimraf dist types",
-    "test": "run-s -n test:types test:only test:format",
-    "test:format": "prettier --check '{src,test}/**/*.ts'",
-    "test:only": "mocha",
-    "test:types": "eslint '{src,test}/**/*.ts'",
-    "lint": "run-s -n lint:types lint:format",
-    "lint:format": "npm run test:format -- --write",
-    "lint:types": "npm run test:types -- --fix",
-    "prepublishOnly": "npm run-s -n build test"
+    "build": "node util/copy_dist.js && rollup -c",
+    "lint": "eslint src/*.js test/*.js util/*.js",
+    "test": "node test/index.js"
   },
-  "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jridgewell/sourcemaps.git",
-    "directory": "packages/sourcemap-codec"
+    "url": "git+https://github.com/kurkle/color.git"
   },
-  "author": "Justin Ridgewell <justin@ridgewell.name>",
-  "license": "MIT"
+  "files": [
+    "dist/*",
+    "dist/color.d.ts"
+  ],
+  "keywords": [
+    "color",
+    "colour",
+    "css",
+    "hsl",
+    "hex",
+    "rgb",
+    "rgba",
+    "hwb",
+    "hsv",
+    "cmyk"
+  ],
+  "author": "Jukka Kurkela",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kurkle/color/issues"
+  },
+  "homepage": "https://github.com/kurkle/color#readme",
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.0",
+    "assert": "^2.0.0",
+    "benchmark": "^2.1.4",
+    "chartjs-color": "^2.4.1",
+    "chartjs-color-string": "^0.6.0",
+    "child_process": "^1.0.2",
+    "chroma-js": "^3.1.1",
+    "color-name": "^2.0.0",
+    "color-names": "^2.0.0",
+    "color-parse": "^2.0.2",
+    "color-parser": "^0.1.0",
+    "color-string": "^1.5.5",
+    "csscolorparser": "^1.0.3",
+    "eslint": "^9.15.0",
+    "eslint-config-chartjs": "^0.3.0",
+    "eslint-config-defaults": "^9.0.0",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-react": "^7.22.0",
+    "fs": "0.0.1-security",
+    "perf_hooks": "0.0.1",
+    "rollup": "^4.25.0",
+    "rollup-plugin-analyzer": "^4.0.0",
+    "rollup-plugin-cleanup": "^3.2.1",
+    "rollup-plugin-istanbul": "^5.0.0",
+    "rollup-plugin-visualizer": "^5.8.3",
+    "tinycolor2": "^1.4.2",
+    "typedoc": "^0.26.7",
+    "typescript": "^5.6.2",
+    "util": "^0.12.3"
+  }
 }

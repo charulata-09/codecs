@@ -4,12 +4,6 @@
  * (c) 2024 Jukka Kurkela
  * Released under the MIT License
  */
-(function (global, factory) {
-typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-typeof define === 'function' && define.amd ? define(factory) :
-(global = typeof globalThis !== 'undefined' ? globalThis : global || self, global["@kurkle/color"] = factory());
-})(this, (function () { 'use strict';
-
 function round(v) {
   return v + 0.5 | 0;
 }
@@ -592,33 +586,4 @@ function index_esm(input) {
   return new Color(input);
 }
 
-var color = /*#__PURE__*/Object.freeze({
-__proto__: null,
-Color: Color,
-b2n: b2n,
-b2p: b2p,
-default: index_esm,
-hexParse: hexParse,
-hexString: hexString,
-hsl2rgb: hsl2rgb,
-hslString: hslString,
-hsv2rgb: hsv2rgb,
-hueParse: hueParse,
-hwb2rgb: hwb2rgb,
-lim: lim,
-n2b: n2b,
-n2p: n2p,
-nameParse: nameParse,
-p2b: p2b,
-rgb2hsl: rgb2hsl,
-rgbParse: rgbParse,
-rgbString: rgbString,
-rotate: rotate,
-round: round
-});
-
-var index = Object.assign(index_esm, color);
-
-return index;
-
-}));
+export { Color, b2n, b2p, index_esm as default, hexParse, hexString, hsl2rgb, hslString, hsv2rgb, hueParse, hwb2rgb, lim, n2b, n2p, nameParse, p2b, rgb2hsl, rgbParse, rgbString, rotate, round };

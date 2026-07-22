@@ -1,177 +1,358 @@
-# @eslint-community/regexpp
+# Node.js Adapter for Hono
 
-[![npm version](https://img.shields.io/npm/v/@eslint-community/regexpp.svg)](https://www.npmjs.com/package/@eslint-community/regexpp)
-[![Downloads/month](https://img.shields.io/npm/dm/@eslint-community/regexpp.svg)](http://www.npmtrends.com/@eslint-community/regexpp)
-[![Build Status](https://github.com/eslint-community/regexpp/workflows/CI/badge.svg)](https://github.com/eslint-community/regexpp/actions)
-[![codecov](https://codecov.io/gh/eslint-community/regexpp/branch/main/graph/badge.svg)](https://codecov.io/gh/eslint-community/regexpp)
+This adapter `@hono/node-server` allows you to run your Hono application on Node.js.
+Initially, Hono wasn't designed for Node.js, but with this adapter, you can now use Hono on Node.js.
+It utilizes web standard APIs implemented in Node.js version 18 or higher.
 
-A regular expression parser for ECMAScript.
+## Benchmarks
 
-## 💿 Installation
+Hono is 3.5 times faster than Express.
 
-```bash
-$ npm install @eslint-community/regexpp
+Express:
+
+```txt
+$ bombardier -d 10s --fasthttp http://localhost:3000/
+
+Statistics        Avg      Stdev        Max
+  Reqs/sec     16438.94    1603.39   19155.47
+  Latency        7.60ms     7.51ms   559.89ms
+  HTTP codes:
+    1xx - 0, 2xx - 164494, 3xx - 0, 4xx - 0, 5xx - 0
+    others - 0
+  Throughput:     4.55MB/s
 ```
 
-- require Node@^12.0.0 || ^14.0.0 || >=16.0.0.
+Hono + `@hono/node-server`:
 
-## 📖 Usage
+```txt
+$ bombardier -d 10s --fasthttp http://localhost:3000/
+
+Statistics        Avg      Stdev        Max
+  Reqs/sec     58296.56    5512.74   74403.56
+  Latency        2.14ms     1.46ms   190.92ms
+  HTTP codes:
+    1xx - 0, 2xx - 583059, 3xx - 0, 4xx - 0, 5xx - 0
+    others - 0
+  Throughput:    12.56MB/s
+```
+
+## Requirements
+
+It works on Node.js versions greater than 18.x. The specific required Node.js versions are as follows:
+
+- 18.x => 18.14.1+
+- 19.x => 19.7.0+
+- 20.x => 20.0.0+
+
+Essentially, you can simply use the latest version of each major release.
+
+## Installation
+
+You can install it from the npm registry with `npm` command:
+
+```sh
+npm install @hono/node-server
+```
+
+Or use `yarn`:
+
+```sh
+yarn add @hono/node-server
+```
+
+## Usage
+
+Just import `@hono/node-server` at the top and write the code as usual.
+The same code that runs on Cloudflare Workers, Deno, and Bun will work.
 
 ```ts
-import {
-    AST,
-    RegExpParser,
-    RegExpValidator,
-    RegExpVisitor,
-    parseRegExpLiteral,
-    validateRegExpLiteral,
-    visitRegExpAST
-} from "@eslint-community/regexpp"
+import { serve } from '@hono/node-server'
+import { Hono } from 'hono'
+
+const app = new Hono()
+app.get('/', (c) => c.text('Hono meets Node.js'))
+
+serve(app, (info) => {
+  console.log(`Listening on http://localhost:${info.port}`) // Listening on http://localhost:3000
+})
 ```
 
-### parseRegExpLiteral(source, options?)
+For example, run it using `ts-node`. Then an HTTP server will be launched. The default port is `3000`.
 
-Parse a given regular expression literal then make AST object.
+```sh
+ts-node ./index.ts
+```
 
-This is equivalent to `new RegExpParser(options).parseLiteral(source)`.
+Open `http://localhost:3000` with your browser.
 
-- **Parameters:**
-    - `source` (`string | RegExp`) The source code to parse.
-    - `options?` ([`RegExpParser.Options`]) The options to parse.
-- **Return:**
-    - The AST of the regular expression.
+## Options
 
-### validateRegExpLiteral(source, options?)
+### `port`
 
-Validate a given regular expression literal.
+```ts
+serve({
+  fetch: app.fetch,
+  port: 8787, // Port number, default is 3000
+})
+```
 
-This is equivalent to `new RegExpValidator(options).validateLiteral(source)`.
+### `createServer`
 
-- **Parameters:**
-    - `source` (`string`) The source code to validate.
-    - `options?` ([`RegExpValidator.Options`]) The options to validate.
+```ts
+import { createServer } from 'node:https'
+import fs from 'node:fs'
 
-### visitRegExpAST(ast, handlers)
+//...
 
-Visit each node of a given AST.
+serve({
+  fetch: app.fetch,
+  createServer: createServer,
+  serverOptions: {
+    key: fs.readFileSync('test/fixtures/keys/agent1-key.pem'),
+    cert: fs.readFileSync('test/fixtures/keys/agent1-cert.pem'),
+  },
+})
+```
 
-This is equivalent to `new RegExpVisitor(handlers).visit(ast)`.
+### `overrideGlobalObjects`
 
-- **Parameters:**
-    - `ast` ([`AST.Node`]) The AST to visit.
-    - `handlers` ([`RegExpVisitor.Handlers`]) The callbacks.
+The default value is `true`. The Node.js Adapter rewrites the global Request/Response and uses a lightweight Request/Response to improve performance. If you don't want to do that, set `false`.
 
-### RegExpParser
+```ts
+serve({
+  fetch: app.fetch,
+  overrideGlobalObjects: false,
+})
+```
 
-#### new RegExpParser(options?)
+### `autoCleanupIncoming`
 
-- **Parameters:**
-    - `options?` ([`RegExpParser.Options`]) The options to parse.
+The default value is `true`. The Node.js Adapter automatically cleans up (explicitly call `destroy()` method) if application is not finished to consume the incoming request. If you don't want to do that, set `false`.
 
-#### parser.parseLiteral(source, start?, end?)
+If the application accepts connections from arbitrary clients, this cleanup must be done otherwise incomplete requests from clients may cause the application to stop responding. If your application only accepts connections from trusted clients, such as in a reverse proxy environment and there is no process that returns a response without reading the body of the POST request all the way through, you can improve performance by setting it to `false`.
 
-Parse a regular expression literal.
+```ts
+serve({
+  fetch: app.fetch,
+  autoCleanupIncoming: false,
+})
+```
 
-- **Parameters:**
-    - `source` (`string`) The source code to parse. E.g. `"/abc/g"`.
-    - `start?` (`number`) The start index in the source code. Default is `0`.
-    - `end?` (`number`) The end index in the source code. Default is `source.length`.
-- **Return:**
-    - The AST of the regular expression.
+## Middleware
 
-#### parser.parsePattern(source, start?, end?, flags?)
+Most built-in middleware also works with Node.js.
+Read [the documentation](https://hono.dev/middleware/builtin/basic-auth) and use the Middleware of your liking.
 
-Parse a regular expression pattern.
+```ts
+import { serve } from '@hono/node-server'
+import { Hono } from 'hono'
+import { prettyJSON } from 'hono/pretty-json'
 
-- **Parameters:**
-    - `source` (`string`) The source code to parse. E.g. `"abc"`.
-    - `start?` (`number`) The start index in the source code. Default is `0`.
-    - `end?` (`number`) The end index in the source code. Default is `source.length`.
-    - `flags?` (`{ unicode?: boolean, unicodeSets?: boolean }`) The flags to enable Unicode mode, and Unicode Set mode.
-- **Return:**
-    - The AST of the regular expression pattern.
+const app = new Hono()
 
-#### parser.parseFlags(source, start?, end?)
+app.get('*', prettyJSON())
+app.get('/', (c) => c.json({ 'Hono meets': 'Node.js' }))
 
-Parse a regular expression flags.
+serve(app)
+```
 
-- **Parameters:**
-    - `source` (`string`) The source code to parse. E.g. `"gim"`.
-    - `start?` (`number`) The start index in the source code. Default is `0`.
-    - `end?` (`number`) The end index in the source code. Default is `source.length`.
-- **Return:**
-    - The AST of the regular expression flags.
+## Serve Static Middleware
 
-### RegExpValidator
+Use Serve Static Middleware that has been created for Node.js.
 
-#### new RegExpValidator(options)
+```ts
+import { serveStatic } from '@hono/node-server/serve-static'
 
-- **Parameters:**
-    - `options` ([`RegExpValidator.Options`]) The options to validate.
+//...
 
-#### validator.validateLiteral(source, start, end)
+app.use('/static/*', serveStatic({ root: './' }))
+```
 
-Validate a regular expression literal.
+If using a relative path, `root` will be relative to the current working directory from which the app was started.
 
-- **Parameters:**
-    - `source` (`string`) The source code to validate.
-    - `start?` (`number`) The start index in the source code. Default is `0`.
-    - `end?` (`number`) The end index in the source code. Default is `source.length`.
+This can cause confusion when running your application locally.
 
-#### validator.validatePattern(source, start, end, flags)
+Imagine your project structure is:
 
-Validate a regular expression pattern.
+```
+my-hono-project/
+  src/
+    index.ts
+  static/
+    index.html
+```
 
-- **Parameters:**
-    - `source` (`string`) The source code to validate.
-    - `start?` (`number`) The start index in the source code. Default is `0`.
-    - `end?` (`number`) The end index in the source code. Default is `source.length`.
-    - `flags?` (`{ unicode?: boolean, unicodeSets?: boolean }`) The flags to enable Unicode mode, and Unicode Set mode.
+Typically, you would run your app from the project's root directory (`my-hono-project`),
+so you would need the following code to serve the `static` folder:
 
-#### validator.validateFlags(source, start, end)
+```ts
+app.use('/static/*', serveStatic({ root: './static' }))
+```
 
-Validate a regular expression flags.
+Notice that `root` here is not relative to `src/index.ts`, rather to `my-hono-project`.
 
-- **Parameters:**
-    - `source` (`string`) The source code to validate.
-    - `start?` (`number`) The start index in the source code. Default is `0`.
-    - `end?` (`number`) The end index in the source code. Default is `source.length`.
+### Options
 
-### RegExpVisitor
+#### `rewriteRequestPath`
 
-#### new RegExpVisitor(handlers)
+If you want to serve files in `./.foojs` with the request path `/__foo/*`, you can write like the following.
 
-- **Parameters:**
-    - `handlers` ([`RegExpVisitor.Handlers`]) The callbacks.
+```ts
+app.use(
+  '/__foo/*',
+  serveStatic({
+    root: './.foojs/',
+    rewriteRequestPath: (path: string) => path.replace(/^\/__foo/, ''),
+  })
+)
+```
 
-#### visitor.visit(ast)
+#### `onFound`
 
-Validate a regular expression literal.
+You can specify handling when the requested file is found with `onFound`.
 
-- **Parameters:**
-    - `ast` ([`AST.Node`]) The AST to visit.
+```ts
+app.use(
+  '/static/*',
+  serveStatic({
+    // ...
+    onFound: (_path, c) => {
+      c.header('Cache-Control', `public, immutable, max-age=31536000`)
+    },
+  })
+)
+```
 
-## 📰 Changelog
+#### `onNotFound`
 
-- [GitHub Releases](https://github.com/eslint-community/regexpp/releases)
+The `onNotFound` is useful for debugging. You can write a handle for when a file is not found.
 
-## 🍻 Contributing
+```ts
+app.use(
+  '/static/*',
+  serveStatic({
+    root: './non-existent-dir',
+    onNotFound: (path, c) => {
+      console.log(`${path} is not found, request to ${c.req.path}`)
+    },
+  })
+)
+```
 
-Welcome contributing!
+#### `precompressed`
 
-Please use GitHub's Issues/PRs.
+The `precompressed` option checks if files with extensions like `.br` or `.gz` are available and serves them based on the `Accept-Encoding` header. It prioritizes Brotli, then Zstd, and Gzip. If none are available, it serves the original file.
 
-### Development Tools
+```ts
+app.use(
+  '/static/*',
+  serveStatic({
+    precompressed: true,
+  })
+)
+```
 
-- `npm test` runs tests and measures coverage.
-- `npm run build` compiles TypeScript source code to `index.js`, `index.js.map`, and `index.d.ts`.
-- `npm run clean` removes the temporary files which are created by `npm test` and `npm run build`.
-- `npm run lint` runs ESLint.
-- `npm run update:test` updates test fixtures.
-- `npm run update:ids` updates `src/unicode/ids.ts`.
-- `npm run watch` runs tests with `--watch` option.
+## ConnInfo Helper
 
-[`AST.Node`]: src/ast.ts#L4
-[`RegExpParser.Options`]: src/parser.ts#L743
-[`RegExpValidator.Options`]: src/validator.ts#L220
-[`RegExpVisitor.Handlers`]: src/visitor.ts#L291
+You can use the [ConnInfo Helper](https://hono.dev/docs/helpers/conninfo) by importing `getConnInfo` from `@hono/node-server/conninfo`.
+
+```ts
+import { getConnInfo } from '@hono/node-server/conninfo'
+
+app.get('/', (c) => {
+  const info = getConnInfo(c) // info is `ConnInfo`
+  return c.text(`Your remote address is ${info.remote.address}`)
+})
+```
+
+## Accessing Node.js API
+
+You can access the Node.js API from `c.env` in Node.js. For example, if you want to specify a type, you can write the following.
+
+```ts
+import { serve } from '@hono/node-server'
+import type { HttpBindings } from '@hono/node-server'
+import { Hono } from 'hono'
+
+const app = new Hono<{ Bindings: HttpBindings }>()
+
+app.get('/', (c) => {
+  return c.json({
+    remoteAddress: c.env.incoming.socket.remoteAddress,
+  })
+})
+
+serve(app)
+```
+
+The APIs that you can get from `c.env` are as follows.
+
+```ts
+type HttpBindings = {
+  incoming: IncomingMessage
+  outgoing: ServerResponse
+}
+
+type Http2Bindings = {
+  incoming: Http2ServerRequest
+  outgoing: Http2ServerResponse
+}
+```
+
+## Direct response from Node.js API
+
+You can directly respond to the client from the Node.js API.
+In that case, the response from Hono should be ignored, so return `RESPONSE_ALREADY_SENT`.
+
+> [!NOTE]
+> This feature can be used when migrating existing Node.js applications to Hono, but we recommend using Hono's API for new applications.
+
+```ts
+import { serve } from '@hono/node-server'
+import type { HttpBindings } from '@hono/node-server'
+import { RESPONSE_ALREADY_SENT } from '@hono/node-server/utils/response'
+import { Hono } from 'hono'
+
+const app = new Hono<{ Bindings: HttpBindings }>()
+
+app.get('/', (c) => {
+  const { outgoing } = c.env
+  outgoing.writeHead(200, { 'Content-Type': 'text/plain' })
+  outgoing.end('Hello World\n')
+
+  return RESPONSE_ALREADY_SENT
+})
+
+serve(app)
+```
+
+## Listen to a UNIX domain socket
+
+You can configure the HTTP server to listen to a UNIX domain socket instead of a TCP port.
+
+```ts
+import { createAdaptorServer } from '@hono/node-server'
+
+// ...
+
+const socketPath = '/tmp/example.sock'
+
+const server = createAdaptorServer(app)
+server.listen(socketPath, () => {
+  console.log(`Listening on ${socketPath}`)
+})
+```
+
+## Related projects
+
+- Hono - <https://hono.dev>
+- Hono GitHub repository - <https://github.com/honojs/hono>
+
+## Authors
+
+- Yusuke Wada <https://github.com/yusukebe>
+- Taku Amano <https://github.com/usualoma>
+
+## License
+
+MIT

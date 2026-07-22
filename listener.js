@@ -1,12 +1,43 @@
-// src/server.ts
-import { createServer as createServerHTTP } from "http";
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/listener.ts
-import { Http2ServerRequest as Http2ServerRequest2 } from "http2";
+var listener_exports = {};
+__export(listener_exports, {
+  getRequestListener: () => getRequestListener
+});
+module.exports = __toCommonJS(listener_exports);
+var import_node_http22 = require("http2");
 
 // src/request.ts
-import { Http2ServerRequest } from "http2";
-import { Readable } from "stream";
+var import_node_http2 = require("http2");
+var import_node_stream = require("stream");
 var RequestError = class extends Error {
   constructor(message, options) {
     super(message, options);
@@ -74,7 +105,7 @@ var newRequestFromIncoming = (method, url, headers, incoming, abortController) =
       init.body = new ReadableStream({
         async pull(controller) {
           try {
-            reader ||= Readable.toWeb(incoming).getReader();
+            reader ||= import_node_stream.Readable.toWeb(incoming).getReader();
             const { done, value } = await reader.read();
             if (done) {
               controller.close();
@@ -87,7 +118,7 @@ var newRequestFromIncoming = (method, url, headers, incoming, abortController) =
         }
       });
     } else {
-      init.body = Readable.toWeb(incoming);
+      init.body = import_node_stream.Readable.toWeb(incoming);
     }
   }
   return new Request(url, init);
@@ -158,7 +189,7 @@ var newRequest = (incoming, defaultHostname) => {
   const incomingUrl = incoming.url || "";
   if (incomingUrl[0] !== "/" && // short-circuit for performance. most requests are relative URL.
   (incomingUrl.startsWith("http://") || incomingUrl.startsWith("https://"))) {
-    if (incoming instanceof Http2ServerRequest) {
+    if (incoming instanceof import_node_http2.Http2ServerRequest) {
       throw new RequestError("Absolute URL for :path is not allowed in HTTP/2");
     }
     try {
@@ -169,12 +200,12 @@ var newRequest = (incoming, defaultHostname) => {
     }
     return req;
   }
-  const host = (incoming instanceof Http2ServerRequest ? incoming.authority : incoming.headers.host) || defaultHostname;
+  const host = (incoming instanceof import_node_http2.Http2ServerRequest ? incoming.authority : incoming.headers.host) || defaultHostname;
   if (!host) {
     throw new RequestError("Missing host header");
   }
   let scheme;
-  if (incoming instanceof Http2ServerRequest) {
+  if (incoming instanceof import_node_http2.Http2ServerRequest) {
     scheme = incoming.scheme;
     if (!(scheme === "http" || scheme === "https")) {
       throw new RequestError("Unsupported scheme");
@@ -330,9 +361,9 @@ var buildOutgoingHttpHeaders = (headers) => {
 var X_ALREADY_SENT = "x-hono-already-sent";
 
 // src/globals.ts
-import crypto from "crypto";
+var import_node_crypto = __toESM(require("crypto"));
 if (typeof global.crypto === "undefined") {
-  global.crypto = crypto;
+  global.crypto = import_node_crypto.default;
 }
 
 // src/listener.ts
@@ -501,7 +532,7 @@ var getRequestListener = (fetchCallback, options = {}) => {
         incoming.on("end", () => {
           incomingEnded = true;
         });
-        if (incoming instanceof Http2ServerRequest2) {
+        if (incoming instanceof import_node_http22.Http2ServerRequest) {
           ;
           outgoing[outgoingEnded] = () => {
             if (!incomingEnded) {
@@ -563,30 +594,7 @@ var getRequestListener = (fetchCallback, options = {}) => {
     }
   };
 };
-
-// src/server.ts
-var createAdaptorServer = (options) => {
-  const fetchCallback = options.fetch;
-  const requestListener = getRequestListener(fetchCallback, {
-    hostname: options.hostname,
-    overrideGlobalObjects: options.overrideGlobalObjects,
-    autoCleanupIncoming: options.autoCleanupIncoming
-  });
-  const createServer = options.createServer || createServerHTTP;
-  const server = createServer(options.serverOptions || {}, requestListener);
-  return server;
-};
-var serve = (options, listeningListener) => {
-  const server = createAdaptorServer(options);
-  server.listen(options?.port ?? 3e3, options.hostname, () => {
-    const serverInfo = server.address();
-    listeningListener && listeningListener(serverInfo);
-  });
-  return server;
-};
-export {
-  RequestError,
-  createAdaptorServer,
-  getRequestListener,
-  serve
-};
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  getRequestListener
+});

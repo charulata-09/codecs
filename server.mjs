@@ -585,8 +585,6 @@ var serve = (options, listeningListener) => {
   return server;
 };
 export {
-  RequestError,
   createAdaptorServer,
-  getRequestListener,
   serve
 };

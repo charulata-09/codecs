@@ -1,6 +1,3 @@
-// src/server.ts
-import { createServer as createServerHTTP } from "http";
-
 // src/listener.ts
 import { Http2ServerRequest as Http2ServerRequest2 } from "http2";
 
@@ -564,29 +561,10 @@ var getRequestListener = (fetchCallback, options = {}) => {
   };
 };
 
-// src/server.ts
-var createAdaptorServer = (options) => {
-  const fetchCallback = options.fetch;
-  const requestListener = getRequestListener(fetchCallback, {
-    hostname: options.hostname,
-    overrideGlobalObjects: options.overrideGlobalObjects,
-    autoCleanupIncoming: options.autoCleanupIncoming
-  });
-  const createServer = options.createServer || createServerHTTP;
-  const server = createServer(options.serverOptions || {}, requestListener);
-  return server;
-};
-var serve = (options, listeningListener) => {
-  const server = createAdaptorServer(options);
-  server.listen(options?.port ?? 3e3, options.hostname, () => {
-    const serverInfo = server.address();
-    listeningListener && listeningListener(serverInfo);
-  });
-  return server;
+// src/vercel.ts
+var handle = (app) => {
+  return getRequestListener(app.fetch);
 };
 export {
-  RequestError,
-  createAdaptorServer,
-  getRequestListener,
-  serve
+  handle
 };

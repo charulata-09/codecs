@@ -1,42 +1,39 @@
 {
-  "name": "@humanfs/types",
-  "version": "0.15.0",
-  "description": "The TypeScript types for the hfs project.",
-  "type": "module",
-  "types": "src/hfs-types.ts",
-  "exports": {
-    ".": {
-      "types": "./src/hfs-types.ts"
-    },
-    "./package.json": "./package.json"
-  },
-  "scripts": {
-    "build": "tsc",
-    "prepare": "npm run build"
-  },
+  "name": "@img/sharp-win32-x64",
+  "version": "0.34.5",
+  "description": "Prebuilt sharp for use with Windows x64",
+  "author": "Lovell Fuller <npm@lovell.info>",
+  "homepage": "https://sharp.pixelplumbing.com",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/humanwhocodes/humanfs.git"
+    "url": "git+https://github.com/lovell/sharp.git",
+    "directory": "npm/win32-x64"
   },
+  "license": "Apache-2.0 AND LGPL-3.0-or-later",
+  "funding": {
+    "url": "https://opencollective.com/libvips"
+  },
+  "preferUnplugged": true,
+  "files": [
+    "lib",
+    "versions.json"
+  ],
   "publishConfig": {
     "access": "public"
   },
-  "keywords": [
-    "filesystem",
-    "fs",
-    "hfs",
-    "files"
-  ],
-  "author": "Nicholas C. Zakas",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/humanwhocodes/humanfs/issues"
+  "type": "commonjs",
+  "exports": {
+    "./sharp.node": "./lib/sharp-win32-x64.node",
+    "./package": "./package.json",
+    "./versions": "./versions.json"
   },
-  "homepage": "https://github.com/humanwhocodes/humanfs#readme",
   "engines": {
-    "node": ">=18.18.0"
+    "node": "^18.17.0 || ^20.3.0 || >=21.0.0"
   },
-  "devDependencies": {
-    "typescript": "^5.2.2"
-  }
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ]
 }
